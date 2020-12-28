@@ -28,7 +28,7 @@
 ###########################################################################
 ###########################################################################
 ##########FUNCTIONS##########
-######krcenje/erosion#######
+
 raster2matrix<-function(input_raster){
   img_dim=dim(input_raster)
   #create array from raster
@@ -53,41 +53,37 @@ raster2matrix<-function(input_raster){
   }
   return(img_matrix)
 }
-#if kernel is 9, than we have a 9x9 matrix. which means we need to start from 4 index 
+
 extract_matrix<-function(i,j,img,kernel){
   #extract neighbouring pixel values to calculate erosion
-  x = floor(kernel/2)+1
- # extract =matrix(0L, nrow = kernel, ncol = kernel)
-#  extract[3][1]
-  extract=matrix(data=0,nrow=kernel,ncol=kernel)
+  x=2*kernel+1
+  extract_mat=matrix(data=0,nrow=x,ncol=x)
   
-  for( k in 1:kernel)
-    for(l in 1:kernel)
+  for( k in 1:x)
+    for(l in 1:x)
     {
-      print(i-x+k)
-      print(j-x+l)
-      print(img[i-x+k,j-x+l])
-      extract[k,l] = img[i-x+k,j-x+l]
+      extract_mat[k,l] = img[i-kernel+k,j-kernel+l]
     }
-  return(extract)
+  return(extract_mat)
 }
 
+######krcenje/erosion#######
 krcenje<-function(img,kernel){
   
   img_height = dim(img)[1]
   img_width = dim(img)[2]
   #we  have only odd numbers like 3,5,9...
-  s=floor(kernel/2)+1
+  
+  s=2*kernel+1
   res=matrix(0L, nrow = img_height, ncol = img_height) 
-  #for(i in img_height-s:img_height)
-   # for(j in img_width-s:img_width)
-  for(i in s:img_height-s)
-     for(j in s:img_height-s)
+
+    for(i in (kernel+1):(img_height-kernel-1))
+     for(j in (kernel+1):(img_height-kernel-1))
     {
       #extract neighbouring pixel values to calculate erosion
       p = extract_matrix(i,j,img,kernel)
       #find minimum
-      res[i][j] = min(p) 
+      res[i,j] = min(p) 
     }
   #return errosion
   return(res)
@@ -95,7 +91,7 @@ krcenje<-function(img,kernel){
 ######sirjenje/erosion#######
 
 #spectral index MSI  function bands 8 and 11
-msi_sentinel<-function(band8,band11){
+msi_sentinel<-function(band8,band11,num){
   band8=raster::brick(band8)
   band11=raster::brick(band11)
   msi=overlay(band11, band8, fun=function(x,y){(x/y)})
@@ -143,11 +139,13 @@ b11_img3<-"T10UGA_20200815T185921_B11_20m.jp2"
 
 
 b8_raster3<-raster(readGDAL(b8_img3))
-#make bigger resolution of pixel
-b8_raster3_20m= aggregate(b8_raster3, fact=2)
+#make bigger resolution of each pixel
+b8_raster3_60m= aggregate(b8_raster3, fact=6)
 rm(b8_raster3)
 b11_raster3<-raster(readGDAL(b11_img3))
-
+#make bigger resolution of each pixel
+b11_raster3_60m= aggregate(b11_raster3, fact=3)
+rm(b11_raster3)
 
 
 b8_raster2<-raster(readGDAL(b3_img2))
@@ -166,10 +164,10 @@ b11_raster2<-raster(readGDAL(b11_img2))
 ###########################################################################
 
 num='3'
-msi_3=msi_sentinel(b8_raster3_20m,b11_raster3)
-rm(b11_raster3)
-rm(b8_raster3_20m)
-msi_3
+msi_3=msi_sentinel(b8_raster3_60m,b11_raster3_60m,num)
+rm(b11_raster3_60m)
+rm(b8_raster3_60m)
+rm(msi_3)
 msi_3_matrix=raster2matrix(msi_3)
 ###########################################################################
 ###                                                                     ###
@@ -181,14 +179,8 @@ msi_3_matrix=raster2matrix(msi_3)
 ###                                                                     ###
 ###########################################################################
 
-
-    #distancce between the  central element  and the ones on the edges 
-    distance=3
-    kernel_len=2*distance+1
+    kernel=3
+    msi_3_eroded=krcenje(msi_3_matrix,3)
+    View(msi_3_eroded)
     
-    extract=extract_matrix(9,9,msi_3_matrix,5)
-    msi_3_matrix[9,9]
-    msi_3_matrix[9,8]
-
-  msi_skrcen=krcenje(msi_3,3)
-
+    

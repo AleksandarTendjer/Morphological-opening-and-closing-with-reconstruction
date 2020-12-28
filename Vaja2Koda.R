@@ -42,11 +42,6 @@ raster2matrix<-function(input_raster){
     for(j in 1:img_dim[2])
     {
       img_matrix[l,k]=img_array[(img_dim[1]*(i-1))+j]
-      #}else
-      # {
-      #img_matrix[i,j]=img_array[j]
-      
-      #}
       l=l+1
     }
     k=k-1
@@ -88,7 +83,26 @@ krcenje<-function(img,kernel){
   #return errosion
   return(res)
 }
-######sirjenje/erosion#######
+######dilatuion#######
+sirjenje<-function(img,kernel){
+  
+  img_height = dim(img)[1]
+  img_width = dim(img)[2]
+  #we  have only odd numbers like 3,5,9...
+  
+  s=2*kernel+1
+  res=matrix(0L, nrow = img_height, ncol = img_height) 
+  
+  for(i in (kernel+1):(img_height-kernel-1))
+    for(j in (kernel+1):(img_height-kernel-1))
+    {
+      #extract neighbouring pixel values to calculate erosion
+      p = extract_matrix(i,j,img,kernel)
+      #find minimum
+      res[i,j] = max(p) 
+    }
+  return(res)
+}
 
 #spectral index MSI  function bands 8 and 11
 msi_sentinel<-function(band8,band11,num){
@@ -178,9 +192,17 @@ msi_3_matrix=raster2matrix(msi_3)
 ### DESCRIPTION: We find the erosion and dilation of indices            ###
 ###                                                                     ###
 ###########################################################################
-
+    
     kernel=3
+    ##################morphological opening########################
     msi_3_eroded=krcenje(msi_3_matrix,3)
-    View(msi_3_eroded)
+    rm(msi_3_matrix)
     
+    msi_3_dilated=sirjenje(msi_3_eroded,3)
+    rm(msi_3_eroded)
+    View(msi_3_dilated)
     
+    output_name="msi_3_opened.tif"
+    msi_3_opened=raster(msi_3_dilated)
+    raster::writeRaster(msi_3_opened, filename = output_name, format="GTiff")
+    ###################################################################

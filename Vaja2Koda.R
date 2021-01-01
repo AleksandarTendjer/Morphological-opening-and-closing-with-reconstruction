@@ -28,27 +28,6 @@
 ###########################################################################
 ###########################################################################
 ##########FUNCTIONS##########
-
-raster2matrix<-function(input_raster){
-  img_dim=dim(input_raster)
-  #create array from raster
-  img_array=as.array(values(input_raster))
-  #new matrix
-  img_matrix=matrix(as.numeric(0),nrow =img_dim[1],ncol=img_dim[2])
-  k=img_dim[1]
-  #go from last row to the 1st row w column goin from 1 to last 
-  for(i in img_dim[1]:1){
-    l=0
-    for(j in 1:img_dim[2])
-    {
-      img_matrix[l,k]=img_array[(img_dim[1]*(i-1))+j]
-      l=l+1
-    }
-    k=k-1
-  }
-  return(img_matrix)
-}
-
 extract_matrix<-function(i,j,img,kernel){
   #extract neighbouring pixel values to calculate erosion
   x=2*kernel+1
@@ -70,7 +49,7 @@ krcenje<-function(img,kernel){
   #we  have only odd numbers like 3,5,9...
   
   s=2*kernel+1
-  res=matrix(0L, nrow = img_height, ncol = img_height) 
+  res=matrix(0L, nrow = img_height, ncol = img_width) 
 
     for(i in (kernel+1):(img_height-kernel-1))
      for(j in (kernel+1):(img_height-kernel-1))
@@ -91,10 +70,10 @@ sirjenje<-function(img,kernel){
   #we  have only odd numbers like 3,5,9...
   
   s=2*kernel+1
-  res=matrix(0L, nrow = img_height, ncol = img_height) 
+  res=matrix(0L, nrow = img_height, ncol = img_width) 
   
   for(i in (kernel+1):(img_height-kernel-1))
-    for(j in (kernel+1):(img_height-kernel-1))
+    for(j in (kernel+1):(img_width-kernel-1))
     {
       #extract neighbouring pixel values to calculate erosion
       p = extract_matrix(i,j,img,kernel)
@@ -182,7 +161,10 @@ msi_3=msi_sentinel(b8_raster3_60m,b11_raster3_60m,num)
 rm(b11_raster3_60m)
 rm(b8_raster3_60m)
 rm(msi_3)
-msi_3_matrix=raster2matrix(msi_3)
+msi_3=raster(readGDAL("3msi.tif"))
+msi_3_matrix=raster::as.matrix(msi_3)
+rm(msi_3)
+
 ###########################################################################
 ###                                                                     ###
 ###                           SECTION 3:                                ###
@@ -203,6 +185,23 @@ msi_3_matrix=raster2matrix(msi_3)
     View(msi_3_dilated)
     
     output_name="msi_3_opened.tif"
-    msi_3_opened=raster(msi_3_dilated)
-    raster::writeRaster(msi_3_opened, filename = output_name, format="GTiff")
+    raster::writeRaster(msi_3_dilated, filename = output_name, format="GTiff")
+    rm(msi_3_dilated)
+    
+    
+    
     ###################################################################
+    ##################morphological closing########################
+    msi_3_dilated=sirjenje(msi_3_matrix,3)
+    rm(msi_3_matrix)
+    
+    msi_3_eroded=krcenje(msi_3_dilated,3)
+    rm(msi_3_dilated)
+
+    output_name="msi_3_closed.tif"
+    raster::writeRaster(msi_3_eroded, filename = output_name, format="GTiff")
+    rm(msi_3_eroded)
+
+    ###################################################################
+    
+    

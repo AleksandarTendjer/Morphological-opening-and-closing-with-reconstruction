@@ -42,7 +42,7 @@ extract_matrix<-function(i,j,img,kernel){
 }
 
 ######krcenje/erosion#######
-krcenje<-function(img,kernel){
+erosion<-function(img,kernel){
   
   img_height = dim(img)[1]
   img_width = dim(img)[2]
@@ -63,7 +63,7 @@ krcenje<-function(img,kernel){
   return(res)
 }
 ######dilatuion#######
-sirjenje<-function(img,kernel){
+dilation<-function(img,kernel){
   
   img_height = dim(img)[1]
   img_width = dim(img)[2]
@@ -83,6 +83,69 @@ sirjenje<-function(img,kernel){
   return(res)
 }
 
+dilation_with_reconstruction<-function(img,original_img,kernel){
+  img_height = dim(img)[1]
+  img_width = dim(img)[2]
+  #we  have only odd numbers like 3,5,9...
+  
+  s=2*kernel+1
+  res_b4=original_img
+  res=img
+  while(isTRUE(all.equal(res_b4,res)))
+  {
+    res_b4=res
+    res=matrix(0L, nrow = img_height, ncol = img_width) 
+  for(i in (kernel+1):(img_height-kernel-1))
+    for(j in (kernel+1):(img_width-kernel-1))
+    {
+      #extract neighbouring pixel values to calculate erosion
+      p = extract_matrix(i,j,img,kernel)
+      #find minimum
+      maximum=max(p)
+      if(maximum<original_img[i,j])
+      {
+        res[i,j] =maximum 
+      }else
+      {
+        res[i,j] =original_img[i,j]
+      }
+      
+    }
+  }
+  return(res)
+}
+erosion_with_reconstruction<-function(img,original_img,kernel){
+  img_height = dim(img)[1]
+  img_width = dim(img)[2]
+  #we  have only odd numbers like 3,5,9...
+  
+  s=2*kernel+1
+  res_b4=original_img
+  res=img
+  while(isTRUE(all.equal(res_b4,res)))
+  {
+    res_b4=res
+    res=matrix(0L, nrow = img_height, ncol = img_width) 
+    for(i in (kernel+1):(img_height-kernel-1))
+      for(j in (kernel+1):(img_width-kernel-1))
+      {
+        #extract neighbouring pixel values to calculate erosion
+        p = extract_matrix(i,j,img,kernel)
+        #find minimum
+        minimum=min(p)
+        if(minimum>original_img[i,j])
+        {
+          res[i,j] =minimum 
+        }else
+        {
+          res[i,j] =original_img[i,j]
+        }
+        
+      }
+  }
+  return(res)
+}
+
 #spectral index MSI  function bands 8 and 11
 msi_sentinel<-function(band8,band11,num){
   band8=raster::brick(band8)
@@ -97,6 +160,22 @@ msi_sentinel<-function(band8,band11,num){
   return(msi)
 }
 
+opening_with_reconstruction<-function(img,kernel){
+  
+  img_eroded=erosion(img,kernel)
+  
+  
+  img_opened=dilation_with_reconstruction(img_eroded,img,1)
+  
+  return(img_opened)
+}
+closing_with_reconstruction<-function(img,kernel){
+  img_eroded=dilation(img,kernel)
+  
+  img_closed=erosion_with_reconstruction(img_eroded,img,1)
+  
+  return(img_closed)
+}
 
 ### Load packages
 library(sp)
@@ -131,6 +210,14 @@ b8_img3<-"T10UGA_20200815T185921_B08_10m.jp2"
 b11_img3<-"T10UGA_20200815T185921_B11_20m.jp2"
 
 
+b8_raster1<-raster(readGDAL(b8_img1))
+#make bigger resolution of each pixel
+b8_raster1_60m= aggregate(b8_raster1, fact=6)
+rm(b8_raster1)
+b11_raster1<-raster(readGDAL(b11_img1))
+
+
+
 b8_raster3<-raster(readGDAL(b8_img3))
 #make bigger resolution of each pixel
 b8_raster3_60m= aggregate(b8_raster3, fact=6)
@@ -156,7 +243,13 @@ b11_raster2<-raster(readGDAL(b11_img2))
 ###                                                                     ###
 ###########################################################################
 
+
 num='3'
+
+msi_1=msi_sentinel(b8_raster1_60m,b11_raster1_60m,num)
+
+msi_2=msi_sentinel(b8_raster2_60m,b11_raster2_60m,num)
+
 msi_3=msi_sentinel(b8_raster3_60m,b11_raster3_60m,num)
 rm(b11_raster3_60m)
 rm(b8_raster3_60m)
@@ -176,11 +269,28 @@ rm(msi_3)
 ###########################################################################
     
     kernel=3
-    ##################morphological opening########################
-    msi_3_eroded=krcenje(msi_3_matrix,3)
+    
+
+  ##################morphological opening########################
+    msi_1_eroded=erosion(msi_1_matrix,3)
+    rm(msi_1_matrix)
+    
+    msi_1_dilated=dilation(msi_1_eroded,3)
+    rm(msi_1_eroded)
+    View(msi_1_dilated)
+    
+    output_name="msi_1_opened.tif"
+    raster::writeRaster(msi_1_dilated, filename = output_name, format="GTiff")
+    rm(msi_1_dilated)
+
+
+
+
+
+    msi_3_eroded=erosion(msi_3_matrix,3)
     rm(msi_3_matrix)
     
-    msi_3_dilated=sirjenje(msi_3_eroded,3)
+    msi_3_dilated=dilation(msi_3_eroded,3)
     rm(msi_3_eroded)
     View(msi_3_dilated)
     
@@ -192,16 +302,49 @@ rm(msi_3)
     
     ###################################################################
     ##################morphological closing########################
-    msi_3_dilated=sirjenje(msi_3_matrix,3)
+    
+    msi_1_dilated=dilation(msi_1_matrix,3)
+    rm(msi_1_matrix)
+    
+    msi_1_eroded=erosion(msi_1_dilated,3)
+    rm(msi_1_dilated)
+    
+    output_name="msi_1_closed.tif"
+    raster::writeRaster(msi_1_eroded, filename = output_name, format="GTiff")
+    rm(msi_1_closed)
+    
+    
+    msi_3_dilated=dilation(msi_3_matrix,3)
     rm(msi_3_matrix)
     
-    msi_3_eroded=krcenje(msi_3_dilated,3)
+    msi_3_eroded=erosion(msi_3_dilated,3)
     rm(msi_3_dilated)
 
     output_name="msi_3_closed.tif"
     raster::writeRaster(msi_3_eroded, filename = output_name, format="GTiff")
-    rm(msi_3_eroded)
+    rm(msi_3_closed)
+    
+    
+    
 
     ###################################################################
     
+    ###########################################################################
+    ###                                                                     ###
+    ###                           SECTION 4:                                ###
+    ###                           Morphological opening###
+    ###                           and         closing with reconstruction                      ###
+    ###########################################################################
+    ### DESCRIPTION: We find the erosion and dilation with reconstruction of indices            ###
+    ###                                                                     ###
+    ###########################################################################
+    msi_3_closed_rec=closing_with_reconstruction(msi_3_matrix,3)
+    msi_3_losed_rec=raster(msi_3_closed_rec)
+    raster::writeRaster(msi_3_losed_rec, filename = "msi_closed_rec_3", format="GTiff")
+    rm(msi_3_closed_rec)
+    #opening#
+    msi_3_opening_rec=opening_with_reconstruction(msi_3_matrix,3)
+    msi_3_opened_rec=raster(msi_3_opening_rec)
+    raster::writeRaster(msi_3_opened_rec, filename = "msi_opened_rec_3", format="GTiff")
+    rm(msi_3_closed_rec)
     

@@ -200,11 +200,13 @@ library(sen2r)
 getwd()
 setwd("imgs/")
 
-b8_img1<-"T34UDV_20190922T094031_B08_10m.jp2"
-b11_img1<-"T34UDV_20190922T094031_B11_20m.jp2"
+b8_img1<-"T14UMC_20200910T173911_B08_10m.jp2"
+b11_img1<-"T14UMC_20200910T173911_B11_20m.jp2"
 
-b8_img2<-"T14UNB_20200910T173911_B08_10m.jp2"
-b11_img2<-"T14UMC_20200910T173911_B11_20m.jp2"
+
+b8_img2<-"T34UDV_20190922T094031_B08_10m.jp2"
+b11_img2<-"T34UDV_20190922T094031_B11_20m.jp2"
+
 
 b8_img3<-"T10UGA_20200815T185921_B08_10m.jp2"
 b11_img3<-"T10UGA_20200815T185921_B11_20m.jp2"
@@ -215,6 +217,16 @@ b8_raster1<-raster(readGDAL(b8_img1))
 b8_raster1_60m= aggregate(b8_raster1, fact=6)
 rm(b8_raster1)
 b11_raster1<-raster(readGDAL(b11_img1))
+b11_raster1_60m= aggregate(b11_raster1, fact=3)
+rm(b11_raster1)
+
+b8_raster2<-raster(readGDAL(b8_img2))
+b8_raster2_60m= aggregate(b8_raster2, fact=6)
+rm(b8_raster2)
+b11_raster2<-raster(readGDAL(b11_img2))
+b11_raster2_60m= aggregate(b11_raster2, fact=3)
+rm(b11_raster2)
+
 
 
 
@@ -228,9 +240,6 @@ b11_raster3_60m= aggregate(b11_raster3, fact=3)
 rm(b11_raster3)
 
 
-b8_raster2<-raster(readGDAL(b3_img2))
-b8_raster3_20m= aggregate(b8_raster3, fact=2)
-b11_raster2<-raster(readGDAL(b11_img2))
 
 
 ###########################################################################
@@ -244,17 +253,28 @@ b11_raster2<-raster(readGDAL(b11_img2))
 ###########################################################################
 
 
-num='3'
+num='1'
 
 msi_1=msi_sentinel(b8_raster1_60m,b11_raster1_60m,num)
+msi_1_matrix=raster::as.matrix(msi_1)
 
+rm(msi_1)
+
+num='2'
 msi_2=msi_sentinel(b8_raster2_60m,b11_raster2_60m,num)
+#msi_2=raster(readGDAL("2msi.tif"))
+msi_2_matrix=raster::as.matrix(msi_2)
+rm(msi_2)
+rm(b11_raster2_60m)
+rm(b8_raster2_60m)
 
+num='3'
 msi_3=msi_sentinel(b8_raster3_60m,b11_raster3_60m,num)
-rm(b11_raster3_60m)
-rm(b8_raster3_60m)
+rm(b11_raster1_60m)
+rm(b8_raster1_60m)
+
 rm(msi_3)
-msi_3=raster(readGDAL("3msi.tif"))
+#msi_3=raster(readGDAL("3msi.tif"))
 msi_3_matrix=raster::as.matrix(msi_3)
 rm(msi_3)
 
@@ -273,24 +293,38 @@ rm(msi_3)
 
   ##################morphological opening########################
     msi_1_eroded=erosion(msi_1_matrix,3)
-    rm(msi_1_matrix)
+#    rm(msi_1_matrix)
     
     msi_1_dilated=dilation(msi_1_eroded,3)
+    msi_1_dilated=raster(msi_1_dilated)
     rm(msi_1_eroded)
     View(msi_1_dilated)
     
     output_name="msi_1_opened.tif"
     raster::writeRaster(msi_1_dilated, filename = output_name, format="GTiff")
     rm(msi_1_dilated)
+  #2
+  
+      msi_2_eroded=erosion(msi_2_matrix,3)
+    #    rm(msi_1_matrix)
+    
+    msi_2_dilated=dilation(msi_2_eroded,3)
+    msi_2_dilated=raster(msi_2_dilated)
+    rm(msi_2_eroded)
+    View(msi_2_dilated)
+    
+    output_name="msi_2_opened.tif"
+    raster::writeRaster(msi_2_dilated, filename = output_name, format="GTiff")
+    rm(msi_2_dilated)
+    
 
-
-
-
+#3
 
     msi_3_eroded=erosion(msi_3_matrix,3)
     rm(msi_3_matrix)
     
     msi_3_dilated=dilation(msi_3_eroded,3)
+    msi_3_dilated=raster(msi_3_dilated)
     rm(msi_3_eroded)
     View(msi_3_dilated)
     
@@ -302,27 +336,45 @@ rm(msi_3)
     
     ###################################################################
     ##################morphological closing########################
-    
+    #1
     msi_1_dilated=dilation(msi_1_matrix,3)
     rm(msi_1_matrix)
     
     msi_1_eroded=erosion(msi_1_dilated,3)
+    msi_1_eroded=raster(msi_1_eroded)
+    
     rm(msi_1_dilated)
     
     output_name="msi_1_closed.tif"
     raster::writeRaster(msi_1_eroded, filename = output_name, format="GTiff")
-    rm(msi_1_closed)
+    rm(msi_1_eroded)
+    #2
+    msi_2_dilated=dilation(msi_2_matrix,3)
+    #rm(msi_2_matrix)
+    
+    msi_2_eroded=erosion(msi_2_dilated,3)
+    msi_2_eroded=raster(msi_2_eroded)
+    
+    rm(msi_2_dilated)
+    
+    output_name="msi_2_closed.tif"
+    raster::writeRaster(msi_2_eroded, filename = output_name, format="GTiff")
+    rm(msi_2_eroded)
     
     
+    
+    #3
     msi_3_dilated=dilation(msi_3_matrix,3)
     rm(msi_3_matrix)
     
     msi_3_eroded=erosion(msi_3_dilated,3)
+    msi_3_eroded=raster(msi_3_eroded)
+    
     rm(msi_3_dilated)
 
     output_name="msi_3_closed.tif"
     raster::writeRaster(msi_3_eroded, filename = output_name, format="GTiff")
-    rm(msi_3_closed)
+    rm(msi_3_eroded)
     
     
     
@@ -338,6 +390,30 @@ rm(msi_3)
     ### DESCRIPTION: We find the erosion and dilation with reconstruction of indices            ###
     ###                                                                     ###
     ###########################################################################
+    #1
+    msi_1_closed_rec=closing_with_reconstruction(msi_1_matrix,3)
+    msi_1_closed_rec=raster(msi_1_closed_rec)
+    raster::writeRaster(msi_1_closed_rec, filename = "msi_closed_rec_1", format="GTiff")
+    rm(msi_1_closed_rec)
+    #opening#
+    msi_1_opening_rec=opening_with_reconstruction(msi_1_matrix,3)
+    msi_1_opened_rec=raster(msi_1_opening_rec)
+    raster::writeRaster(msi_1_opened_rec, filename = "msi_opened_rec_1", format="GTiff")
+    rm(msi_1_opening_rec)
+    rm(msi_1_opened_rec)
+    #2
+    msi_2_closed_rec=closing_with_reconstruction(msi_2_matrix,3)
+    msi_2_closed_rec=raster(msi_2_closed_rec)
+    raster::writeRaster(msi_2_closed_rec, filename = "msi_closed_rec_2", format="GTiff")
+    rm(msi_2_closed_rec)
+    #opening#
+    msi_2_opening_rec=opening_with_reconstruction(msi_2_matrix,3)
+    msi_2_opened_rec=raster(msi_2_opening_rec)
+    raster::writeRaster(msi_2_opened_rec, filename = "msi_opened_rec_2", format="GTiff")
+    rm(msi_2_opened_rec)
+    rm(msi_2_opening_rec)
+    
+    #3
     msi_3_closed_rec=closing_with_reconstruction(msi_3_matrix,3)
     msi_3_losed_rec=raster(msi_3_closed_rec)
     raster::writeRaster(msi_3_losed_rec, filename = "msi_closed_rec_3", format="GTiff")
@@ -346,5 +422,5 @@ rm(msi_3)
     msi_3_opening_rec=opening_with_reconstruction(msi_3_matrix,3)
     msi_3_opened_rec=raster(msi_3_opening_rec)
     raster::writeRaster(msi_3_opened_rec, filename = "msi_opened_rec_3", format="GTiff")
-    rm(msi_3_closed_rec)
-    
+    rm(msi_3_opened_rec)
+    rm(msi_3_opening_rec)

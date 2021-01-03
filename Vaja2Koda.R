@@ -91,10 +91,12 @@ dilation_with_reconstruction<-function(img,original_img,kernel){
   s=2*kernel+1
   res_b4=original_img
   res=img
-  while(isTRUE(all.equal(res_b4,res)))
+  iter=0
+  while(isTRUE(all.equal(res,res_b4,tolerance=0.0001))==FALSE)
   {
     res_b4=res
     res=matrix(0L, nrow = img_height, ncol = img_width) 
+    iter=iter+1
   for(i in (kernel+1):(img_height-kernel-1))
     for(j in (kernel+1):(img_width-kernel-1))
     {
@@ -112,6 +114,7 @@ dilation_with_reconstruction<-function(img,original_img,kernel){
       
     }
   }
+  print(iter)
   return(res)
 }
 erosion_with_reconstruction<-function(img,original_img,kernel){
@@ -122,10 +125,12 @@ erosion_with_reconstruction<-function(img,original_img,kernel){
   s=2*kernel+1
   res_b4=original_img
   res=img
-  while(isTRUE(all.equal(res_b4,res)))
+  iter=0
+  while(isTRUE(all.equal(res,res_b4,tolerance=0.0001))==FALSE)
   {
     res_b4=res
     res=matrix(0L, nrow = img_height, ncol = img_width) 
+    iter=(iter+1)
     for(i in (kernel+1):(img_height-kernel-1))
       for(j in (kernel+1):(img_width-kernel-1))
       {
@@ -143,6 +148,7 @@ erosion_with_reconstruction<-function(img,original_img,kernel){
         
       }
   }
+  print(iter)
   return(res)
 }
 
@@ -161,19 +167,13 @@ msi_sentinel<-function(band8,band11,num){
 }
 
 opening_with_reconstruction<-function(img,kernel){
-  
   img_eroded=erosion(img,kernel)
-  
-  
   img_opened=dilation_with_reconstruction(img_eroded,img,1)
-  
   return(img_opened)
 }
 closing_with_reconstruction<-function(img,kernel){
-  img_eroded=dilation(img,kernel)
-  
-  img_closed=erosion_with_reconstruction(img_eroded,img,1)
-  
+  img_dilated=dilation(img,kernel)
+  img_closed=erosion_with_reconstruction(img_dilated,img,1)
   return(img_closed)
 }
 
@@ -262,7 +262,7 @@ rm(msi_1)
 
 num='2'
 msi_2=msi_sentinel(b8_raster2_60m,b11_raster2_60m,num)
-#msi_2=raster(readGDAL("2msi.tif"))
+msi_2=raster(readGDAL("2msi.tif"))
 msi_2_matrix=raster::as.matrix(msi_2)
 rm(msi_2)
 rm(b11_raster2_60m)
@@ -401,13 +401,22 @@ rm(msi_3)
     raster::writeRaster(msi_1_opened_rec, filename = "msi_opened_rec_1", format="GTiff")
     rm(msi_1_opening_rec)
     rm(msi_1_opened_rec)
-    #2
+    ###################2
+    start_time <- Sys.time()
     msi_2_closed_rec=closing_with_reconstruction(msi_2_matrix,3)
+    end_time <- Sys.time()
+    time_closing=end_time - start_time
+    
     msi_2_closed_rec=raster(msi_2_closed_rec)
     raster::writeRaster(msi_2_closed_rec, filename = "msi_closed_rec_2", format="GTiff")
     rm(msi_2_closed_rec)
     #opening#
+  
+    start_time <- Sys.time()
     msi_2_opening_rec=opening_with_reconstruction(msi_2_matrix,3)
+    end_time <- Sys.time()
+    time_opening=end_time - start_time
+  
     msi_2_opened_rec=raster(msi_2_opening_rec)
     raster::writeRaster(msi_2_opened_rec, filename = "msi_opened_rec_2", format="GTiff")
     rm(msi_2_opened_rec)
@@ -424,3 +433,7 @@ rm(msi_3)
     raster::writeRaster(msi_3_opened_rec, filename = "msi_opened_rec_3", format="GTiff")
     rm(msi_3_opened_rec)
     rm(msi_3_opening_rec)
+    
+    
+    
+    
